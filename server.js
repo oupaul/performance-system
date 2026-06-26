@@ -34,7 +34,14 @@ app.use(session({
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public', {
+    setHeaders: (res, filePath) => {
+        // HTML 不快取，確保更新後使用者一律拿到最新介面（避免改版後仍顯示舊頁）
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
+}));
 
 // 檔案上傳設定
 const storage = multer.diskStorage({
