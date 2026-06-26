@@ -14,7 +14,10 @@ cd "$SCRIPT_DIR"
 
 SERVICE_NAME="performance-system"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-SERVICE_PORT="${PORT:-3000}"
+# Port 決定順序：環境變數 PORT > 現有服務已設定的 port > 預設 3000
+# （避免重跑 deploy.sh 時把原本自訂的 port 改掉）
+EXISTING_PORT="$(systemctl show -p Environment "${SERVICE_NAME}" 2>/dev/null | grep -oE 'PORT=[0-9]+' | head -1 | cut -d= -f2)"
+SERVICE_PORT="${PORT:-${EXISTING_PORT:-3000}}"
 SUDO_CMD=$([ "$EUID" -eq 0 ] && echo "" || echo "sudo")
 SERVICE_USER=$([ "$EUID" -eq 0 ] && echo "root" || echo "$USER")
 
