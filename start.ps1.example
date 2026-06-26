@@ -1,0 +1,5 @@
+# 啟動腳本範例
+# 使用方式: 複製此檔案為 start.ps1 並修改 PORT 值
+$env:PORT = 3000
+npm start
+

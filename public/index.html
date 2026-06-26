@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>維護記錄單績效評比系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .panel {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .upload-zone {
+            border: 3px dashed #ddd;
+            border-radius: 12px;
+            padding: 60px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .upload-zone h3 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .upload-zone p {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .upload-zone input {
+            display: none;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 14px 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:hover {
+            background: #f8f9ff;
+        }
+        
+        .rank-1 { background: linear-gradient(135deg, #ffd700 0%, #ffec8b 100%); }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32 0%, #daa06d 100%); }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-high { background: #f8cbad; color: #c65911; }
+        .badge-mid { background: #ffe699; color: #bf9000; }
+        .badge-low { background: #c6efce; color: #006400; }
+        
+        .positive { color: #006400; font-weight: 600; }
+        .negative { color: #8b0000; font-weight: 600; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+        }
+        
+        .stat-card h4 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .weight-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .weight-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .weight-item label {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .weight-item input {
+            width: 80px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .weight-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .keyword-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .keyword-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        
+        .keyword-tag .delete {
+            cursor: pointer;
+            opacity: 0.6;
+        }
+        
+        .keyword-tag .delete:hover {
+            opacity: 1;
+        }
+        
+        .detail-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: #667eea;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+        
+        .detail-toggle:hover {
+            transform: scale(1.2);
+        }
+        
+        .detail-toggle .toggle-icon {
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        
+        .detail-row {
+            background: #f8f9fa;
+        }
+        
+        .add-keyword {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .add-keyword input, .add-keyword select {
+            padding: 10px 14px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .message {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .history-item:hover {
+            background: #f8f9ff;
+        }
+        
+        .history-item .date {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .history-item .count {
+            color: #999;
+            font-size: 13px;
+        }
+        
+        .history-item .filename {
+            color: #667eea;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+        
+        .keyword-highlight {
+            background-color: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
+        .process-description {
+            max-width: 400px;
+            text-align: left;
+            padding: 8px;
+            word-wrap: break-word;
+            font-size: 13px;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            min-width: 120px;
+        }
+        
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+        
+        .record-count {
+            display: flex;
+            align-items: center;
+            color: #666;
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .login-container h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+        }
+        
+        .user-info {
+            color: white;
+            font-size: 14px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登入頁面 -->
+    <div id="loginPage" class="login-container">
+        <h1>📊 維護記錄單績效評比系統</h1>
+        <div id="loginMessage" class="message"></div>
+        <form class="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>帳號</label>
+                <input type="text" id="loginUsername" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>密碼</label>
+                <input type="password" id="loginPassword" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary">登入</button>
+        </form>
+        <p style="margin-top: 20px; text-align: center; color: #999; font-size: 12px;">
+            預設帳號：admin / admin123
+        </p>
+    </div>
+    
+    <!-- 主系統頁面 -->
+    <div id="mainPage" class="container hidden">
+        <header>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h1>📊 維護記錄單績效評比系統</h1>
+                    <p>多因子複雜度評分 ｜ 權重可調整 ｜ 自動產出報表</p>
+                </div>
+                <div class="user-menu">
+                    <span class="user-info" id="userInfo"></span>
+                    <button class="btn btn-secondary" onclick="handleLogout()">登出</button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="upload">📤 上傳資料</button>
+            <button class="tab" data-tab="results">📈 績效結果</button>
+            <button class="tab" data-tab="records">📋 工單明細</button>
+            <button class="tab" data-tab="settings">⚙️ 權重設定</button>
+            <button class="tab" data-tab="keywords">🏷️ 關鍵字管理</button>
+            <button class="tab" data-tab="device-types">🔧 設備類型管理</button>
+            <button class="tab" data-tab="account">👤 帳號設定</button>
+        </div>
+        
+        <!-- 上傳資料 -->
+        <div class="panel active" id="panel-upload">
+            <div class="section-title">上傳維護記錄單</div>
+            
+            <div id="uploadMessage" class="message"></div>
+            
+            <div class="upload-zone" id="uploadZone">
+                <h3>📁 拖曳檔案至此處或點擊上傳</h3>
+                <p>支援 .xlsx, .xls 格式</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls">
+            </div>
+            
+            <div class="section-title" style="margin-top: 40px;">歷史紀錄</div>
+            <div id="historyList"></div>
+        </div>
+        
+        <!-- 績效結果 -->
+        <div class="panel" id="panel-results">
+            <div class="section-title">績效評比結果</div>
+            
+            <div class="stats-grid" id="statsGrid"></div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>工程人員</th>
+                            <th>排名</th>
+                            <th>綜合績效分數</th>
+                            <th>工單完成數</th>
+                            <th>總服務工時</th>
+                            <th>平均複雜度</th>
+                            <th>高複雜度案件</th>
+                            <th>獎金分配(%)</th>
+                            <th>純工單數分配(%)</th>
+                            <th>分配差異(%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable"></tbody>
+                </table>
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-primary" onclick="exportReport()">📥 匯出 Excel 報表</button>
+                <button class="btn btn-secondary" onclick="recalculate()">🔄 重新計算</button>
+            </div>
+        </div>
+        
+        <!-- 工單明細 -->
+        <div class="panel" id="panel-records">
+            <div class="section-title">工單複雜度明細</div>
+            
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>工程人員：</label>
+                    <select id="filterEngineer">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>複雜度等級：</label>
+                    <select id="filterComplexity">
+                        <option value="">全部</option>
+                        <option value="高">高</option>
+                        <option value="中">中</option>
+                        <option value="低">低</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>工作類別：</label>
+                    <select id="filterWorkType">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>關鍵字搜尋：</label>
+                    <input type="text" id="filterKeyword" placeholder="搜尋處理說明...">
+                </div>
+                
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" onclick="refreshRecords()">🔄 重新整理</button>
+                    <button class="btn btn-secondary" onclick="clearFilters()">清除篩選</button>
+                </div>
+                
+                <div class="record-count" id="recordCount">共 0 筆</div>
+            </div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>任務編號</th>
+                            <th>叫修日期</th>
+                            <th>工程人員</th>
+                            <th>工作類別</th>
+                            <th>總工時</th>
+                            <th>複雜度分數</th>
+                            <th>複雜度等級</th>
+                            <th>匹配關鍵字</th>
+                            <th>處理說明</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTable"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 權重設定 -->
+        <div class="panel" id="panel-settings">
+            <div class="section-title">績效指標權重設定</div>
+            <p style="color: #666; margin-bottom: 20px;">調整各指標的權重比例，總和應為 100%</p>
+            
+            <!-- 計算說明 -->
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px; color: #333; font-size: 16px;">📋 各指標計算說明</h3>
+                <div id="indicatorExplanation" style="display: grid; gap: 12px; font-size: 13px; line-height: 1.6;">
+                    <!-- 將由 JavaScript 動態載入 -->
+                </div>
+                <div id="deviceTypeReference" style="margin-top: 20px; padding: 15px; background: white; border-radius: 4px; border: 1px solid #ddd;">
+                    <strong style="color: #333; display: block; margin-bottom: 10px;">🔧 設備類型評分對照表（用於複雜度計算）</strong>
+                    <div style="font-size: 12px; color: #666; line-height: 1.8;">
+                        <div>設備類型判斷來源：<strong>工作類別(work_type)</strong> 欄位</div>
+                        <div style="margin-top: 8px;">判斷方式：檢查工作類別字串是否包含以下關鍵字，若包含多個則取最高分</div>
+                        <div id="deviceTypeReferenceList" style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                            <!-- 將由 JavaScript 動態載入 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="weight-form" id="weightForm"></div>
+            
+            <div class="actions">
+                <button class="btn btn-primary" onclick="saveWeights()">💾 儲存權重</button>
+                <button class="btn btn-secondary" onclick="recalculate()">🔄 套用並重新計算</button>
+            </div>
+        </div>
+        
+        <!-- 帳號設定 -->
+        <div class="panel" id="panel-account">
+            <div class="section-title">帳號設定</div>
+            
+            <div style="max-width: 500px;">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>目前帳號</label>
+                    <input type="text" id="currentUsername" readonly style="background: #f0f0f0;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>舊密碼</label>
+                    <input type="password" id="oldPassword" placeholder="請輸入目前密碼">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>新密碼</label>
+                    <input type="password" id="newPassword" placeholder="請輸入新密碼（至少6個字元）">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>確認新密碼</label>
+                    <input type="password" id="confirmPassword" placeholder="請再次輸入新密碼">
+                </div>
+                
+                <div id="changePasswordMessage" class="message"></div>
+                
+                <button class="btn btn-primary" onclick="changePassword()">💾 修改密碼</button>
+            </div>
+        </div>
+        
+        <!-- 關鍵字管理 -->
+        <div class="panel" id="panel-keywords">
+            <div class="section-title">技術關鍵字管理</div>
+            <p style="color: #666; margin-bottom: 20px;">根據處理說明中的關鍵字判斷案件複雜度</p>
+            
+            <!-- 匯出匯入操作區域 -->
+            <div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="exportKeywords()">📥 匯出關鍵字</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importKeywordFile').click()">📤 批次匯入</button>
+                    <button class="btn btn-secondary" onclick="downloadKeywordTemplate()">📋 下載匯入範本</button>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 4px; border-left: 4px solid #667eea;">
+                    <strong style="color: #333; display: block; margin-bottom: 8px;">📝 匯入格式說明</strong>
+                    <div style="font-size: 13px; color: #666; line-height: 1.8;">
+                        <div>• Excel 檔案需包含以下欄位：</div>
+                        <div style="margin-left: 20px; margin-top: 5px;">
+                            <div><strong>關鍵字</strong>：必填，關鍵字內容</div>
+                            <div><strong>專業度等級</strong>：必填，必須為「高專業度」、「中專業度」或「低專業度」</div>
+                            <div><strong>分數</strong>：選填，未填寫時將使用預設值（高專業度25分、中專業度10分、低專業度2分）</div>
+                        </div>
+                        <div style="margin-top: 10px;">• 點擊「下載匯入範本」可取得包含範例資料的 Excel 檔案</div>
+                        <div>• 若關鍵字與專業度等級組合已存在，則會更新該記錄的分數</div>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="importKeywordFile" accept=".xlsx,.xls" style="display: none;" onchange="importKeywords(event)">
+            
+            <h4 style="margin: 20px 0 10px; color: #c65911;">🔴 高專業度 (25分/個)</h4>
+            <div class="keyword-list" id="keywords-high"></div>
+            
+            <h4 style="margin: 20px 0 10px; color: #bf9000;">🟡 中專業度 (10分/個)</h4>
+            <div class="keyword-list" id="keywords-mid"></div>
+            
+            <h4 style="margin: 20px 0 10px; color: #006400;">🟢 低專業度 (2分/個)</h4>
+            <div class="keyword-list" id="keywords-low"></div>
+            
+            <div class="add-keyword">
+                <input type="text" id="newKeyword" placeholder="輸入新關鍵字">
+                <select id="newKeywordLevel">
+                    <option value="高專業度">高專業度 (25分)</option>
+                    <option value="中專業度">中專業度 (10分)</option>
+                    <option value="低專業度">低專業度 (2分)</option>
+                </select>
+                <button class="btn btn-primary" onclick="addKeyword()">➕ 新增</button>
+            </div>
+        </div>
+        
+        <!-- 設備類型管理 -->
+        <div class="panel" id="panel-device-types">
+            <div class="section-title">設備類型管理</div>
+            <p style="color: #666; margin-bottom: 20px;">根據工作類別(work_type)欄位中的設備類型關鍵字判斷複雜度分數</p>
+            <p style="color: #888; font-size: 12px; margin-bottom: 20px;">判斷方式：檢查工作類別字串是否包含設備類型關鍵字，若包含多個則取最高分</p>
+            
+            <div style="margin-bottom: 30px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">設備類型</th>
+                            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 150px;">分數</th>
+                            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 180px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTypesList">
+                        <!-- 將由 JavaScript 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="add-keyword" style="border-top: 2px solid #eee; padding-top: 20px;">
+                <input type="text" id="newDeviceName" placeholder="輸入設備類型名稱（如：伺服器）">
+                <input type="number" id="newDeviceScore" placeholder="分數" min="0" max="100" style="width: 100px;">
+                <button class="btn btn-primary" onclick="addDeviceType()">➕ 新增設備類型</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentBatch = null;
+        let isAuthenticated = false;
+        
+        // 檢查登入狀態
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/status');
+                const data = await res.json();
+                
+                if (data.authenticated) {
+                    isAuthenticated = true;
+                    document.getElementById('loginPage').classList.add('hidden');
+                    document.getElementById('mainPage').classList.remove('hidden');
+                    document.getElementById('userInfo').textContent = `管理員：${data.username}`;
+                    // 更新帳號設定頁面的使用者名稱
+                    const currentUsernameInput = document.getElementById('currentUsername');
+                    if (currentUsernameInput) {
+                        currentUsernameInput.value = data.username;
+                    }
+                } else {
+                    isAuthenticated = false;
+                    document.getElementById('loginPage').classList.remove('hidden');
+                    document.getElementById('mainPage').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                document.getElementById('loginPage').classList.remove('hidden');
+                document.getElementById('mainPage').classList.add('hidden');
+            }
+        }
+        
+        // 處理登入
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const messageEl = document.getElementById('loginMessage');
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    messageEl.textContent = '登入成功';
+                    messageEl.className = 'message success';
+                    await checkAuth();
+                    // 重新初始化
+                    await init();
+                } else {
+                    messageEl.textContent = data.error || '登入失敗';
+                    messageEl.className = 'message error';
+                }
+            } catch (error) {
+                messageEl.textContent = '登入失敗：' + error.message;
+                messageEl.className = 'message error';
+            }
+        }
+        
+        // 處理登出
+        async function handleLogout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                await checkAuth();
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+        
+        // 修改密碼
+        async function changePassword() {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const messageEl = document.getElementById('changePasswordMessage');
+            
+            // 驗證輸入
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                messageEl.textContent = '請填寫所有欄位';
+                messageEl.className = 'message error';
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                messageEl.textContent = '新密碼長度至少需要 6 個字元';
+                messageEl.className = 'message error';
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                messageEl.textContent = '新密碼與確認密碼不符';
+                messageEl.className = 'message error';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    messageEl.textContent = '密碼修改成功！';
+                    messageEl.className = 'message success';
+                    // 清空表單
+                    document.getElementById('oldPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    messageEl.textContent = data.error || '密碼修改失敗';
+                    messageEl.className = 'message error';
+                }
+            } catch (error) {
+                messageEl.textContent = '密碼修改失敗：' + error.message;
+                messageEl.className = 'message error';
+            }
+        }
+        
+        // API 請求錯誤處理
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const response = await originalFetch(...args);
+            if (response.status === 401) {
+                // 未授權，重新檢查登入狀態
+                await checkAuth();
+            }
+            return response;
+        };
+        
+        // Tab 切換
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', async () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+                
+                // 當切換到權重設定頁面時，更新設備類型對照表
+                if (tab.dataset.tab === 'settings') {
+                    await updateDeviceTypeReference();
+                }
+            });
+        });
+        
+        // 檔案上傳
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                uploadFile(fileInput.files[0]);
+            }
+        });
+        
+        async function uploadFile(file) {
+            const messageEl = document.getElementById('uploadMessage');
+            messageEl.className = 'message';
+            messageEl.textContent = '上傳中...';
+            messageEl.classList.add('success');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    messageEl.textContent = `✅ ${data.message}`;
+                    messageEl.className = 'message success';
+                    currentBatch = data.uploadBatch;
+                    loadResults();
+                    loadRecords();
+                    loadHistory();
+                    
+                    // 切換到結果頁
+                    document.querySelector('[data-tab="results"]').click();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                messageEl.textContent = `❌ 上傳失敗: ${error.message}`;
+                messageEl.className = 'message error';
+            }
+        }
+        
+        // 載入績效結果
+        async function loadResults() {
+            if (!currentBatch) return;
+            
+            const res = await fetch(`/api/results/${currentBatch}`);
+            const results = await res.json();
+            
+            // 統計卡片
+            const totalTickets = results.reduce((sum, r) => sum + r.ticket_count, 0);
+            const totalHours = results.reduce((sum, r) => sum + r.total_hours, 0);
+            const avgComplexity = results.reduce((sum, r) => sum + r.avg_complexity, 0) / results.length;
+            
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-card">
+                    <h4>總工單數</h4>
+                    <div class="value">${totalTickets}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>總服務工時</h4>
+                    <div class="value">${totalHours.toFixed(1)}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>平均複雜度</h4>
+                    <div class="value">${avgComplexity.toFixed(1)}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>工程人員數</h4>
+                    <div class="value">${results.length}</div>
+                </div>
+            `;
+            
+            // 結果表格
+            document.getElementById('resultsTable').innerHTML = results.map(r => `
+                <tr class="${r.ranking <= 3 ? 'rank-' + r.ranking : ''}">
+                    <td><strong>${r.engineer}</strong></td>
+                    <td>🏆 ${r.ranking}</td>
+                    <td><strong>${r.final_score}</strong></td>
+                    <td>${r.ticket_count}</td>
+                    <td>${r.total_hours.toFixed(1)}</td>
+                    <td>${r.avg_complexity.toFixed(1)}</td>
+                    <td>${r.high_complexity_count}</td>
+                    <td><strong>${r.bonus_ratio}%</strong></td>
+                    <td>${r.ticket_only_ratio}%</td>
+                    <td class="${r.ratio_diff > 0 ? 'positive' : r.ratio_diff < 0 ? 'negative' : ''}">
+                        ${r.ratio_diff > 0 ? '+' : ''}${r.ratio_diff}%
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 高亮關鍵字
+        function highlightKeywords(text, keywords) {
+            if (!text || !keywords || keywords.length === 0) return text || '-';
+            
+            // 轉義 HTML 特殊字符
+            let highlightedText = String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+            
+            // 建立關鍵字映射（轉為大寫用於比對）
+            const keywordMap = new Map();
+            keywords.forEach(kw => {
+                const upperKeyword = kw.keyword.toUpperCase();
+                if (!keywordMap.has(upperKeyword) || kw.keyword.length > keywordMap.get(upperKeyword).length) {
+                    keywordMap.set(upperKeyword, kw.keyword);
+                }
+            });
+            
+            // 轉為大寫用於比對
+            const upperText = highlightedText.toUpperCase();
+            
+            // 找出所有匹配位置並標記
+            const matches = [];
+            keywordMap.forEach((originalKeyword, upperKeyword) => {
+                let index = 0;
+                while ((index = upperText.indexOf(upperKeyword, index)) !== -1) {
+                    matches.push({
+                        start: index,
+                        end: index + originalKeyword.length,
+                        keyword: originalKeyword
+                    });
+                    index += originalKeyword.length;
+                }
+            });
+            
+            // 按起始位置排序並合併重疊的匹配
+            matches.sort((a, b) => a.start - b.start);
+            const mergedMatches = [];
+            matches.forEach(match => {
+                if (mergedMatches.length === 0 || match.start >= mergedMatches[mergedMatches.length - 1].end) {
+                    mergedMatches.push(match);
+                } else {
+                    // 合併重疊的匹配
+                    const last = mergedMatches[mergedMatches.length - 1];
+                    last.end = Math.max(last.end, match.end);
+                    if (match.keyword.length > last.keyword.length) {
+                        last.keyword = match.keyword;
+                    }
+                }
+            });
+            
+            // 從後往前替換，避免索引變化
+            for (let i = mergedMatches.length - 1; i >= 0; i--) {
+                const match = mergedMatches[i];
+                const before = highlightedText.substring(0, match.start);
+                const matchText = highlightedText.substring(match.start, match.end);
+                const after = highlightedText.substring(match.end);
+                highlightedText = before + `<span class="keyword-highlight">${matchText}</span>` + after;
+            }
+            
+            return highlightedText;
+        }
+        
+        // 保存原始記錄資料
+        let allRecords = [];
+        let allKeywords = [];
+        
+        // 載入工單明細
+        async function loadRecords() {
+            if (!currentBatch) return;
+            
+            const [recordsRes, keywordsRes] = await Promise.all([
+                fetch(`/api/records/${currentBatch}`),
+                fetch('/api/keywords')
+            ]);
+            
+            allRecords = await recordsRes.json();
+            allKeywords = await keywordsRes.json();
+            
+            // 更新篩選選項
+            updateFilterOptions();
+            
+            // 顯示記錄
+            applyFilters();
+        }
+        
+        // 更新篩選選項
+        function updateFilterOptions() {
+            // 取得所有工程人員
+            const engineers = [...new Set(allRecords.map(r => r.engineer).filter(Boolean))].sort();
+            const engineerSelect = document.getElementById('filterEngineer');
+            engineerSelect.innerHTML = '<option value="">全部</option>';
+            engineers.forEach(engineer => {
+                const option = document.createElement('option');
+                option.value = engineer;
+                option.textContent = engineer;
+                engineerSelect.appendChild(option);
+            });
+            
+            // 取得所有工作類別
+            const workTypes = [...new Set(allRecords.map(r => r.work_type).filter(Boolean))].sort();
+            const workTypeSelect = document.getElementById('filterWorkType');
+            workTypeSelect.innerHTML = '<option value="">全部</option>';
+            workTypes.forEach(workType => {
+                const option = document.createElement('option');
+                option.value = workType;
+                option.textContent = workType;
+                workTypeSelect.appendChild(option);
+            });
+        }
+        
+        // 應用篩選
+        function applyFilters() {
+            const filterEngineer = document.getElementById('filterEngineer').value;
+            const filterComplexity = document.getElementById('filterComplexity').value;
+            const filterWorkType = document.getElementById('filterWorkType').value;
+            const filterKeyword = document.getElementById('filterKeyword').value.trim().toLowerCase();
+            
+            // 篩選記錄
+            let filteredRecords = allRecords.filter(r => {
+                // 工程人員篩選
+                if (filterEngineer && r.engineer !== filterEngineer) return false;
+                
+                // 複雜度等級篩選
+                if (filterComplexity && r.complexity_level !== filterComplexity) return false;
+                
+                // 工作類別篩選
+                if (filterWorkType && r.work_type !== filterWorkType) return false;
+                
+                // 關鍵字搜尋（搜尋處理說明）
+                if (filterKeyword) {
+                    const processDesc = (r.process_description || '').toLowerCase();
+                    if (!processDesc.includes(filterKeyword)) return false;
+                }
+                
+                return true;
+            });
+            
+            // 更新記錄數量
+            document.getElementById('recordCount').textContent = `共 ${filteredRecords.length} 筆`;
+            
+            // 重新計算匹配關鍵字（使用當前關鍵字列表）
+            function recalculateMatchedKeywords(processDescription, keywords) {
+                if (!processDescription || !keywords || keywords.length === 0) return '-';
+                
+                const desc = processDescription.toUpperCase();
+                const matched = [];
+                const matchedLevels = new Set();
+                
+                // 記錄已計分的關鍵字（確保同一個關鍵字只計分一次）
+                const scoredKeywords = new Set();
+                
+                // 按關鍵字長度排序（先匹配長的）
+                const sortedKeywords = [...keywords].sort((a, b) => b.keyword.length - a.keyword.length);
+                const matchedPositions = new Set();
+                
+                sortedKeywords.forEach(kw => {
+                    // 如果這個關鍵字已經計分過，跳過
+                    const keywordKey = kw.keyword.toUpperCase();
+                    if (scoredKeywords.has(keywordKey)) {
+                        return;
+                    }
+                    
+                    const keyword = kw.keyword.toUpperCase();
+                    let searchIndex = 0;
+                    
+                    while (true) {
+                        const index = desc.indexOf(keyword, searchIndex);
+                        if (index === -1) break;
+                        
+                        // 檢查是否已被匹配
+                        let alreadyMatched = false;
+                        for (let i = index; i < index + keyword.length; i++) {
+                            if (matchedPositions.has(i)) {
+                                alreadyMatched = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!alreadyMatched) {
+                            for (let i = index; i < index + keyword.length; i++) {
+                                matchedPositions.add(i);
+                            }
+                            matched.push(`${kw.keyword}(${kw.level[0]})`);
+                            matchedLevels.add(kw.level);
+                            scoredKeywords.add(keywordKey);
+                            break; // 找到第一個匹配位置後就停止
+                        }
+                        
+                        searchIndex = index + 1;
+                    }
+                });
+                
+                return matched.length > 0 ? matched.join(', ') : '-';
+            }
+            
+            // 顯示篩選後的記錄
+            document.getElementById('recordsTable').innerHTML = filteredRecords.map((r, index) => {
+                // 使用當前關鍵字列表重新計算匹配關鍵字
+                const currentMatchedKeywords = recalculateMatchedKeywords(r.process_description, allKeywords);
+                
+                const details = r.complexityDetails || {};
+                const rowId = `record-row-${index}`;
+                const detailsId = `record-details-${index}`;
+                
+                return `
+                <tr id="${rowId}">
+                    <td>
+                        <button class="detail-toggle" onclick="toggleDetails('${detailsId}', '${rowId}')" title="顯示/隱藏計算明細">
+                            <span class="toggle-icon">▶</span>
+                        </button>
+                    </td>
+                    <td>${r.task_id || '-'}</td>
+                    <td>${r.call_date ? new Date(r.call_date).toLocaleDateString() : '-'}</td>
+                    <td>${r.engineer}</td>
+                    <td>${r.work_type || '-'}</td>
+                    <td>${r.total_hours}</td>
+                    <td><strong>${r.complexity_score}</strong></td>
+                    <td><span class="badge badge-${r.complexity_level === '高' ? 'high' : r.complexity_level === '中' ? 'mid' : 'low'}">${r.complexity_level}</span></td>
+                    <td style="font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${currentMatchedKeywords}</td>
+                    <td class="process-description">${highlightKeywords(r.process_description, allKeywords)}</td>
+                </tr>
+                <tr id="${detailsId}" class="detail-row" style="display: none;">
+                    <td colspan="10" style="padding: 20px; background: #f8f9fa; border-top: 2px solid #667eea;">
+                        <div style="max-width: 900px; margin: 0 auto;">
+                            <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">📊 複雜度分數計算明細</h4>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+                                <div style="font-size: 13px; color: #1565c0; line-height: 1.6;">
+                                    <strong>🔢 正規化說明：</strong>加權總分的理論最大值約為 35 分（關鍵字60×40% + 工時20×30% + 設備20×20% + 非例行10×10% = 24+6+4+1 = 35）。<br>
+                                    為使分數更直觀，將加權總分除以基準值 25 再乘以 100，轉換為 0-100 分制。<br>
+                                    公式：<code style="background: white; padding: 2px 6px; border-radius: 3px; color: #c7254e;">正規化分數 = min(加權總分 ÷ 25 × 100, 100)</code>（最大值限制為 100 分）
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px;">
+                                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">關鍵字分數 (40%)</div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #333;">
+                                        ${details.keywordScore || 0} × 0.4 = <strong style="color: #667eea;">${details.keywordWeighted || 0}</strong>
+                                    </div>
+                                </div>
+                                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #52c41a;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">工時分數 (30%)</div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #333;">
+                                        ${details.hoursScore || 0} × 0.3 = <strong style="color: #52c41a;">${details.hoursWeighted || 0}</strong>
+                                    </div>
+                                </div>
+                                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #faad14;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">設備類型分數 (20%)</div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #333;">
+                                        ${details.deviceScore || 0} × 0.2 = <strong style="color: #faad14;">${details.deviceWeighted || 0}</strong>
+                                    </div>
+                                </div>
+                                <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #ff4d4f;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">非例行加分 (10%)</div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #333;">
+                                        ${details.routineScore || 0} × 0.1 = <strong style="color: #ff4d4f;">${details.routineWeighted || 0}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-top: 10px;">
+                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                     <div>
+                                         <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">加權總分</div>
+                                         <div style="font-size: 24px; font-weight: 700;">
+                                             ${details.total || 0} = ${details.keywordWeighted || 0} + ${details.hoursWeighted || 0} + ${details.deviceWeighted || 0} + ${details.routineWeighted || 0}
+                                         </div>
+                                     </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">
+                                            正規化後分數 (× 100 ÷ ${details.normalizationFactor || 25})
+                                            <span style="display: block; font-size: 11px; opacity: 0.8; margin-top: 3px;">
+                                                將加權總分轉換為 0-100 分制
+                                            </span>
+                                        </div>
+                                        <div style="font-size: 32px; font-weight: 700;">
+                                            ${r.complexity_score}
+                                        </div>
+                                    </div>
+                                 </div>
+                             </div>
+                             ${details.levelDetails ? `
+                             <div style="background: white; padding: 20px; border-radius: 8px; margin-top: 15px; border: 2px solid #667eea;">
+                                 <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">📈 複雜度等級判定明細</h4>
+                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                                     <div style="padding: 12px; background: ${details.levelDetails.hasHigh ? '#ffebee' : '#f5f5f5'}; border-radius: 6px; border-left: 4px solid ${details.levelDetails.hasHigh ? '#f44336' : '#ccc'};">
+                                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">高專業度關鍵字</div>
+                                         <div style="font-size: 16px; font-weight: 600; color: #333;">
+                                             ${details.levelDetails.hasHigh ? '✓ 已匹配' : '✗ 未匹配'}
+                                         </div>
+                                     </div>
+                                     <div style="padding: 12px; background: ${details.levelDetails.hasMid ? '#fff3e0' : '#f5f5f5'}; border-radius: 6px; border-left: 4px solid ${details.levelDetails.hasMid ? '#ff9800' : '#ccc'};">
+                                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">中專業度關鍵字</div>
+                                         <div style="font-size: 16px; font-weight: 600; color: #333;">
+                                             ${details.levelDetails.hasMid ? '✓ 已匹配' : '✗ 未匹配'}
+                                         </div>
+                                     </div>
+                                     <div style="padding: 12px; background: ${details.levelDetails.hasLow ? '#e8f5e9' : '#f5f5f5'}; border-radius: 6px; border-left: 4px solid ${details.levelDetails.hasLow ? '#4caf50' : '#ccc'};">
+                                         <div style="font-size: 12px; color: #666; margin-bottom: 5px;">低專業度關鍵字</div>
+                                         <div style="font-size: 16px; font-weight: 600; color: #333;">
+                                             ${details.levelDetails.hasLow ? '✓ 已匹配' : '✗ 未匹配'}
+                                         </div>
+                                     </div>
+                                 </div>
+                                 <div style="padding: 15px; background: ${r.complexity_level === '高' ? '#ffebee' : r.complexity_level === '中' ? '#fff3e0' : '#e8f5e9'}; border-radius: 8px; border-left: 4px solid ${r.complexity_level === '高' ? '#f44336' : r.complexity_level === '中' ? '#ff9800' : '#4caf50'};">
+                                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                         <span style="font-size: 14px; color: #666;">最終等級：</span>
+                                         <span class="badge badge-${r.complexity_level === '高' ? 'high' : r.complexity_level === '中' ? 'mid' : 'low'}" style="font-size: 18px; padding: 6px 12px;">${r.complexity_level}</span>
+                                     </div>
+                                     <div style="font-size: 13px; color: #555; line-height: 1.6;">
+                                         <strong>判定原因：</strong>${details.levelDetails.levelReason || '無'}
+                                     </div>
+                                 </div>
+                             </div>
+                             ` : ''}
+                         </div>
+                     </td>
+                 </tr>
+            `;
+            }).join('');
+        }
+        
+        // 重新整理工單明細
+        async function refreshRecords() {
+            if (!currentBatch) {
+                alert('請先選擇一個批次');
+                return;
+            }
+            await loadRecords();
+        }
+        
+        // 清除篩選
+        function clearFilters() {
+            document.getElementById('filterEngineer').value = '';
+            document.getElementById('filterComplexity').value = '';
+            document.getElementById('filterWorkType').value = '';
+            document.getElementById('filterKeyword').value = '';
+            applyFilters();
+        }
+        
+        // 切換計算明細顯示
+        function toggleDetails(detailsId, rowId) {
+            const detailsRow = document.getElementById(detailsId);
+            const toggleIcon = document.querySelector(`#${rowId} .toggle-icon`);
+            
+            if (detailsRow.style.display === 'none') {
+                detailsRow.style.display = '';
+                toggleIcon.textContent = '▼';
+            } else {
+                detailsRow.style.display = 'none';
+                toggleIcon.textContent = '▶';
+            }
+        }
+        
+        // 更新設備類型對照表
+        async function updateDeviceTypeReference() {
+            try {
+                const res = await fetch('/api/device-types');
+                const deviceTypes = await res.json();
+                
+                // 按分數降序排序
+                const sortedTypes = [...deviceTypes].sort((a, b) => b.score - a.score);
+                
+                const referenceList = document.getElementById('deviceTypeReferenceList');
+                if (referenceList) {
+                    referenceList.innerHTML = sortedTypes.map(dt => 
+                        `<div>• ${dt.device_name}：<strong>${dt.score}分</strong></div>`
+                    ).join('');
+                    
+                    // 如果沒有設備類型，顯示提示
+                    if (sortedTypes.length === 0) {
+                        referenceList.innerHTML = '<div style="color: #999;">目前無設備類型設定</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('更新設備類型對照表失敗:', error);
+            }
+        }
+        
+        // 載入權重設定
+        async function loadWeights() {
+            const res = await fetch('/api/weights');
+            const weights = await res.json();
+            
+            const labels = {
+                'ticket_count': '工單完成數',
+                'total_hours': '總服務工時',
+                'avg_complexity': '平均案件複雜度',
+                'high_complexity_count': '高複雜度案件數',
+                'non_routine_ratio': '非例行工作比例',
+                'diversity': '服務多樣性',
+                'efficiency': '平均案件工時效率'
+            };
+            
+            const explanations = {
+                'ticket_count': '計算方式：統計該工程師完成的所有工單數量（COUNT(*)）。評分方式：使用「最小值-最大值正規化」，工單數越多分數越高。',
+                'total_hours': '計算方式：統計該工程師所有工單的總服務工時（SUM(total_hours)）。評分方式：使用「最小值-最大值正規化」，總工時越多分數越高。',
+                'avg_complexity': '計算方式：計算該工程師所有工單的平均複雜度分數（AVG(complexity_score)）。複雜度分數由關鍵字(40%)、工時(30%)、設備類型(20%)、非例行加分(10%)組成，分數範圍 0-100。設備類型判斷：依據「工作類別(work_type)」欄位，使用關鍵字比對方式（如包含「伺服器」得20分、「網路設備」得18分等），若包含多個設備類型則取最高分。評分方式：使用「最小值-最大值正規化」，平均複雜度越高分數越高。',
+                'high_complexity_count': '計算方式：統計該工程師處理的「高」複雜度等級工單數量。評分方式：使用「最小值-最大值正規化」，高複雜度案件數越多分數越高。',
+                'non_routine_ratio': '計算方式：非例行工單數 ÷ 總工單數 × 100%。非例行工單指工作類別中「不包含"例行"」的工單。評分方式：使用「最小值-最大值正規化」，非例行比例越高分數越高。',
+                'diversity': '計算方式：不同工作類別種類數 + 不同工作內容種類數。反映工程師處理案件的多樣性，數值越高表示處理的服務類型越廣泛。評分方式：使用「最小值-最大值正規化」，多樣性越高分數越高。',
+                'efficiency': '計算方式：以 2.5 小時為理想值，計算平均工時與理想值的差異。公式：效率分數 = max(0, 100 - |平均工時 - 2.5| / 2.5 × 50)。評分方式：越接近 2.5 小時分數越高，過長或過短都會扣分。'
+            };
+            
+            // 載入計算說明
+            document.getElementById('indicatorExplanation').innerHTML = weights.map(w => `
+                <div style="padding: 12px; background: white; border-left: 3px solid #667eea; border-radius: 4px;">
+                    <strong style="color: #333;">${labels[w.name] || w.name}</strong>
+                    <div style="color: #666; margin-top: 4px;">${explanations[w.name] || '計算方式說明'}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('weightForm').innerHTML = weights.map(w => `
+                <div class="weight-item">
+                    <label>${labels[w.name] || w.name}</label>
+                    <input type="number" 
+                           id="weight-${w.name}" 
+                           value="${(w.weight * 100).toFixed(0)}" 
+                           min="0" max="100" step="5">
+                    <span>%</span>
+                </div>
+            `).join('');
+            
+            // 更新設備類型對照表
+            await updateDeviceTypeReference();
+        }
+        
+        // 儲存權重
+        async function saveWeights() {
+            const inputs = document.querySelectorAll('#weightForm input');
+            const weights = {};
+            
+            inputs.forEach(input => {
+                const name = input.id.replace('weight-', '');
+                weights[name] = parseFloat(input.value) / 100;
+            });
+            
+            const total = Object.values(weights).reduce((a, b) => a + b, 0);
+            if (Math.abs(total - 1) > 0.01) {
+                alert(`權重總和應為 100%，目前為 ${(total * 100).toFixed(0)}%`);
+                return;
+            }
+            
+            await fetch('/api/weights', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ weights })
+            });
+            
+            alert('權重已儲存！');
+        }
+        
+        // 重新計算
+        async function recalculate() {
+            if (!currentBatch) {
+                alert('請先上傳資料');
+                return;
+            }
+            
+            await saveWeights();
+            await fetch(`/api/recalculate/${currentBatch}`, { method: 'POST' });
+            await loadResults();
+            alert('已重新計算！');
+            document.querySelector('[data-tab="results"]').click();
+        }
+        
+        // 匯出報表
+        function exportReport() {
+            if (!currentBatch) {
+                alert('請先上傳資料');
+                return;
+            }
+            window.location.href = `/api/export/${currentBatch}`;
+        }
+        
+        // 載入關鍵字
+        async function loadKeywords() {
+            const res = await fetch('/api/keywords');
+            const keywords = await res.json();
+            
+            const groups = { '高專業度': [], '中專業度': [], '低專業度': [] };
+            keywords.forEach(k => {
+                if (groups[k.level]) groups[k.level].push(k);
+            });
+            
+            const badgeClass = { '高專業度': 'high', '中專業度': 'mid', '低專業度': 'low' };
+            
+            for (const [level, kws] of Object.entries(groups)) {
+                const containerId = `keywords-${level === '高專業度' ? 'high' : level === '中專業度' ? 'mid' : 'low'}`;
+                document.getElementById(containerId).innerHTML = kws.map(k => `
+                    <span class="keyword-tag badge-${badgeClass[level]}">
+                        ${k.keyword}
+                        <span class="delete" onclick="deleteKeyword(${k.id})">✕</span>
+                    </span>
+                `).join('');
+            }
+        }
+        
+        // 新增關鍵字
+        async function addKeyword() {
+            const keyword = document.getElementById('newKeyword').value.trim();
+            const level = document.getElementById('newKeywordLevel').value;
+            
+            if (!keyword) {
+                alert('請輸入關鍵字');
+                return;
+            }
+            
+            const scores = { '高專業度': 25, '中專業度': 10, '低專業度': 2 };
+            
+            await fetch('/api/keywords', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keyword, level, score: scores[level] })
+            });
+            
+            document.getElementById('newKeyword').value = '';
+            await loadKeywords();
+        }
+        
+        // 刪除關鍵字
+        async function deleteKeyword(id) {
+            if (!confirm('確定要刪除此關鍵字？')) return;
+            
+            await fetch(`/api/keywords/${id}`, { method: 'DELETE' });
+            await loadKeywords();
+        }
+        
+        // 匯出關鍵字
+        function exportKeywords() {
+            window.location.href = '/api/keywords/export';
+        }
+        
+        // 下載關鍵字匯入範本
+        function downloadKeywordTemplate() {
+            window.location.href = '/api/keywords/template';
+        }
+        
+        // 批次匯入關鍵字
+        async function importKeywords(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 檢查檔案格式
+            const validExtensions = ['.xlsx', '.xls'];
+            const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            if (!validExtensions.includes(fileExtension)) {
+                alert('請選擇 Excel 檔案（.xlsx 或 .xls）');
+                event.target.value = '';
+                return;
+            }
+            
+            if (!confirm('匯入將新增或更新關鍵字（相同關鍵字和等級會更新分數）。是否繼續？')) {
+                event.target.value = '';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/keywords/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await res.json();
+                
+                if (!res.ok) {
+                    alert('匯入失敗：' + (result.error || '未知錯誤'));
+                    event.target.value = '';
+                    return;
+                }
+                
+                let message = `匯入完成！\n新增：${result.imported} 筆\n更新：${result.updated} 筆`;
+                if (result.errors && result.errors.length > 0) {
+                    message += `\n\n錯誤（${result.errors.length} 筆）：\n${result.errors.slice(0, 10).join('\n')}`;
+                    if (result.errors.length > 10) {
+                        message += `\n... 還有 ${result.errors.length - 10} 筆錯誤`;
+                    }
+                }
+                alert(message);
+                
+                // 重新載入關鍵字列表
+                await loadKeywords();
+                
+                // 清空檔案輸入
+                event.target.value = '';
+            } catch (error) {
+                alert('匯入時發生錯誤：' + error.message);
+                event.target.value = '';
+            }
+        }
+        
+        // 載入設備類型
+        async function loadDeviceTypes() {
+            const res = await fetch('/api/device-types');
+            const deviceTypes = await res.json();
+            
+            document.getElementById('deviceTypesList').innerHTML = deviceTypes.map(dt => `
+                <tr style="border-bottom: 1px solid #eee;" id="device-row-${dt.id}">
+                    <td style="padding: 12px;">${dt.device_name}</td>
+                    <td style="padding: 12px; text-align: center;">
+                        <input type="number" 
+                               id="device-score-${dt.id}" 
+                               value="${dt.score}" 
+                               min="0" 
+                               max="100" 
+                               style="width: 80px; padding: 6px; text-align: center; border: 2px solid #ddd; border-radius: 4px; font-weight: 600; color: #667eea;"
+                               onchange="enableSaveButton(${dt.id})">
+                    </td>
+                    <td style="padding: 12px; text-align: center;">
+                        <button class="btn btn-primary" 
+                                id="save-btn-${dt.id}" 
+                                style="padding: 6px 12px; font-size: 12px; margin-right: 8px; display: none;" 
+                                onclick="updateDeviceType(${dt.id})">儲存</button>
+                        <button class="btn btn-secondary" 
+                                style="padding: 6px 12px; font-size: 12px;" 
+                                onclick="deleteDeviceType(${dt.id})">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 啟用儲存按鈕（當分數改變時）
+        function enableSaveButton(id) {
+            const saveBtn = document.getElementById(`save-btn-${id}`);
+            if (saveBtn) {
+                saveBtn.style.display = 'inline-block';
+            }
+        }
+        
+        // 更新設備類型分數
+        async function updateDeviceType(id) {
+            const scoreInput = document.getElementById(`device-score-${id}`);
+            const score = parseInt(scoreInput.value);
+            
+            if (isNaN(score) || score < 0 || score > 100) {
+                alert('請輸入有效的分數（0-100）');
+                scoreInput.focus();
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/device-types/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ score })
+                });
+                
+                if (!res.ok) {
+                    const error = await res.json();
+                    alert(error.error || '更新失敗');
+                    return;
+                }
+                
+                // 隱藏儲存按鈕
+                const saveBtn = document.getElementById(`save-btn-${id}`);
+                if (saveBtn) {
+                    saveBtn.style.display = 'none';
+                }
+                
+                // 重新載入設備類型列表和對照表
+                await loadDeviceTypes();
+                await updateDeviceTypeReference();
+            } catch (error) {
+                alert('更新設備類型時發生錯誤：' + error.message);
+            }
+        }
+        
+        // 新增設備類型
+        async function addDeviceType() {
+            const deviceName = document.getElementById('newDeviceName').value.trim();
+            const score = parseInt(document.getElementById('newDeviceScore').value);
+            
+            if (!deviceName) {
+                alert('請輸入設備類型名稱');
+                return;
+            }
+            
+            if (isNaN(score) || score < 0 || score > 100) {
+                alert('請輸入有效的分數（0-100）');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/device-types', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ device_name: deviceName, score })
+                });
+                
+                if (!res.ok) {
+                    const error = await res.json();
+                    alert(error.error || '新增失敗');
+                    return;
+                }
+                
+                document.getElementById('newDeviceName').value = '';
+                document.getElementById('newDeviceScore').value = '';
+                await loadDeviceTypes();
+                await updateDeviceTypeReference();
+            } catch (error) {
+                alert('新增設備類型時發生錯誤：' + error.message);
+            }
+        }
+        
+        // 刪除設備類型
+        async function deleteDeviceType(id) {
+            if (!confirm('確定要刪除此設備類型嗎？刪除後重新上傳資料將使用新的設備類型設定。')) return;
+            
+            try {
+                await fetch(`/api/device-types/${id}`, { method: 'DELETE' });
+                await loadDeviceTypes();
+                await updateDeviceTypeReference();
+            } catch (error) {
+                alert('刪除設備類型時發生錯誤：' + error.message);
+            }
+        }
+        
+        // 載入歷史紀錄
+        async function loadHistory() {
+            const res = await fetch('/api/batches');
+            const batches = await res.json();
+            
+            document.getElementById('historyList').innerHTML = batches.map(b => `
+                <div class="history-item" onclick="loadBatch('${b.upload_batch}')">
+                    <div>
+                        <div class="date">${new Date(b.created_at).toLocaleString()}</div>
+                        ${b.original_filename ? `<div class="filename">📄 ${b.original_filename}</div>` : ''}
+                        <div class="count">${b.record_count} 筆工單</div>
+                    </div>
+                    <span>→</span>
+                </div>
+            `).join('') || '<p style="color: #999; padding: 20px;">尚無歷史紀錄</p>';
+        }
+        
+        // 載入特定批次
+        async function loadBatch(batch) {
+            currentBatch = batch;
+            await loadResults();
+            await loadRecords();
+            document.querySelector('[data-tab="results"]').click();
+        }
+        
+        // 初始化
+        async function init() {
+            // 先檢查登入狀態
+            await checkAuth();
+            
+            if (!isAuthenticated) {
+                return;
+            }
+            
+            try {
+                await loadWeights();
+                await loadKeywords();
+                await loadDeviceTypes();
+                await loadHistory();
+                
+                // 載入最新批次
+                const res = await fetch('/api/latest-batch');
+                const { batch } = await res.json();
+                if (batch) {
+                    currentBatch = batch;
+                    await loadResults();
+                    await loadRecords();
+                }
+                
+                // 綁定篩選事件
+                const filterEngineer = document.getElementById('filterEngineer');
+                const filterComplexity = document.getElementById('filterComplexity');
+                const filterWorkType = document.getElementById('filterWorkType');
+                const filterKeyword = document.getElementById('filterKeyword');
+                
+                if (filterEngineer) filterEngineer.addEventListener('change', applyFilters);
+                if (filterComplexity) filterComplexity.addEventListener('change', applyFilters);
+                if (filterWorkType) filterWorkType.addEventListener('change', applyFilters);
+                if (filterKeyword) filterKeyword.addEventListener('input', applyFilters);
+            } catch (error) {
+                console.error('Init error:', error);
+                if (error.message.includes('需要登入') || error.status === 401) {
+                    await checkAuth();
+                }
+            }
+        }
+        
+        // 啟動
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# ===== 依賴 =====
+node_modules/
+npm-debug.log*
+
+# ===== 機敏資料 / 個資（嚴禁上傳）=====
+# SQLite 資料庫（含工單個資、管理員密碼雜湊）
+db/
+# 使用者上傳的原始 Excel
+uploads/
+# 備份檔（含資料庫）
+backups/
+# 工單 / 績效 / 關鍵字匯出（含工程師姓名等個資）
+*.xlsx
+*.xls
+# 系統打包備份
+*.zip
+
+# ===== 執行期 / 產生檔 =====
+# 安裝時依本機路徑產生
+start.sh
+*.log
+.env
+.env.*
+
+# ===== 安裝腳本誤建的字面目錄 =====
+{public,uploads,db}/
+
+# ===== 編輯器 / 系統 =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
