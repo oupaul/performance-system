@@ -178,6 +178,26 @@ function initDatabase() {
     
     defaultDeviceTypes.forEach(([name, score]) => insertDeviceType.run(name, score));
 
+    // 初始化複雜度公式權重表（第一層：單筆工單複雜度的組成比重）
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS complexity_weights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            weight REAL NOT NULL,
+            description TEXT
+        );
+    `);
+    const defaultComplexityWeights = [
+        ['keyword', 0.4, '技術關鍵字'],
+        ['hours', 0.3, '處理工時'],
+        ['device', 0.2, '設備類型'],
+        ['routine', 0.1, '非例行加分']
+    ];
+    const insertComplexityWeight = db.prepare(
+        'INSERT OR IGNORE INTO complexity_weights (name, weight, description) VALUES (?, ?, ?)'
+    );
+    defaultComplexityWeights.forEach(w => insertComplexityWeight.run(...w));
+
     // 初始化預設管理員帳號（如果不存在）
     const defaultAdmin = {
         username: 'admin',
@@ -233,6 +253,18 @@ function getWeights() {
     const weights = {};
     rows.forEach(r => weights[r.name] = r.weight);
     return weights;
+}
+
+// 複雜度公式權重（第一層）；資料表沒有的項目以預設值補上
+function getComplexityWeights() {
+    const w = { keyword: 0.4, hours: 0.3, device: 0.2, routine: 0.1 };
+    try {
+        const rows = db.prepare('SELECT name, weight FROM complexity_weights').all();
+        rows.forEach(r => { if (r.name in w) w[r.name] = r.weight; });
+    } catch (e) {
+        // 資料表尚未建立時使用預設值
+    }
+    return w;
 }
 
 function calculateKeywordScore(description, keywords) {
@@ -321,16 +353,17 @@ function calculateHoursScore(hours) {
     return Math.min(hours / 8 * 20, 20);
 }
 
-function calculateComplexityScore(record, keywords, includeDetails = false) {
+function calculateComplexityScore(record, keywords, includeDetails = false, weights = null) {
+    const w = weights || getComplexityWeights();
     const { score: keywordScore, matched, matchedLevels } = calculateKeywordScore(record.process_description, keywords);
     const hoursScore = calculateHoursScore(record.total_hours);
     const deviceScore = calculateDeviceScore(record.work_type);
     const routineScore = (record.work_type && record.work_type.includes('例行')) ? 0 : 10;
-    
-    const keywordWeighted = keywordScore * 0.4;
-    const hoursWeighted = hoursScore * 0.3;
-    const deviceWeighted = deviceScore * 0.2;
-    const routineWeighted = routineScore * 0.1;
+
+    const keywordWeighted = keywordScore * w.keyword;
+    const hoursWeighted = hoursScore * w.hours;
+    const deviceWeighted = deviceScore * w.device;
+    const routineWeighted = routineScore * w.routine;
     
     const total = keywordWeighted + hoursWeighted + deviceWeighted + routineWeighted;
     const normalized = Math.min(total / 25 * 100, 100);
@@ -384,16 +417,16 @@ function calculateComplexityScore(record, keywords, includeDetails = false) {
         result.details = {
             keywordScore: Math.round(keywordScore * 10) / 10,
             keywordWeighted: Math.round(keywordWeighted * 100) / 100,
-            keywordWeight: 0.4,
+            keywordWeight: w.keyword,
             hoursScore: Math.round(hoursScore * 10) / 10,
             hoursWeighted: Math.round(hoursWeighted * 100) / 100,
-            hoursWeight: 0.3,
+            hoursWeight: w.hours,
             deviceScore: Math.round(deviceScore * 10) / 10,
             deviceWeighted: Math.round(deviceWeighted * 100) / 100,
-            deviceWeight: 0.2,
+            deviceWeight: w.device,
             routineScore: Math.round(routineScore * 10) / 10,
             routineWeighted: Math.round(routineWeighted * 100) / 100,
-            routineWeight: 0.1,
+            routineWeight: w.routine,
             total: Math.round(total * 100) / 100,
             normalized: Math.round(normalized * 10) / 10,
             normalizationFactor: 25,
@@ -901,7 +934,45 @@ app.put('/api/weights', (req, res) => {
             }
         });
         transaction();
-        
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 取得複雜度公式權重（第一層）
+app.get('/api/complexity-weights', (req, res) => {
+    try {
+        const rows = db.prepare('SELECT name, weight, description FROM complexity_weights').all();
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 更新複雜度公式權重（第一層）
+app.put('/api/complexity-weights', (req, res) => {
+    try {
+        const { weights } = req.body;
+        if (!weights || typeof weights !== 'object') {
+            return res.status(400).json({ error: '缺少 weights 物件' });
+        }
+
+        const allowed = ['keyword', 'hours', 'device', 'routine'];
+        const update = db.prepare('UPDATE complexity_weights SET weight = ? WHERE name = ?');
+        const transaction = db.transaction(() => {
+            for (const [name, weight] of Object.entries(weights)) {
+                if (!allowed.includes(name)) continue;
+                const w = Number(weight);
+                if (!Number.isFinite(w) || w < 0) {
+                    throw new Error(`權重值無效：${name}`);
+                }
+                update.run(w, name);
+            }
+        });
+        transaction();
+
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });

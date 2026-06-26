@@ -750,8 +750,19 @@
                 </div>
             </div>
             
+            <!-- 第一層：複雜度公式權重（單筆工單） -->
+            <div style="background: #eef2ff; padding: 20px; border-radius: 8px; margin-bottom: 28px; border: 1px solid #c7d2fe;">
+                <h3 style="margin-bottom: 6px; color: #3730a3; font-size: 16px;">🟦 複雜度公式權重（單筆工單）</h3>
+                <p style="color: #666; font-size: 13px; margin-bottom: 16px;">決定每一筆工單的「複雜度分數」由哪些因素、各佔多少比重組成，總和應為 100%。修改後請按下方「🔄 套用並重新計算」才會反映到既有資料的分數。</p>
+                <div class="weight-form" id="complexityWeightForm"></div>
+                <div class="actions" style="margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="saveComplexityWeights()">💾 儲存複雜度權重</button>
+                </div>
+            </div>
+
+            <h3 style="margin: 8px 0 14px; color: #166534; font-size: 16px;">🟩 績效指標權重（工程師排名）</h3>
             <div class="weight-form" id="weightForm"></div>
-            
+
             <div class="actions">
                 <button class="btn btn-primary" onclick="saveWeights()">💾 儲存權重</button>
                 <button class="btn btn-secondary" onclick="recalculate()">🔄 套用並重新計算</button>
@@ -1564,8 +1575,56 @@
             
             // 更新設備類型對照表
             await updateDeviceTypeReference();
+
+            // 載入第一層：複雜度公式權重
+            await loadComplexityWeights();
         }
-        
+
+        // 載入複雜度公式權重（第一層）
+        async function loadComplexityWeights() {
+            const res = await fetch('/api/complexity-weights');
+            const weights = await res.json();
+
+            const labels = { keyword: '技術關鍵字', hours: '處理工時', device: '設備類型', routine: '非例行加分' };
+            const order = ['keyword', 'hours', 'device', 'routine'];
+            weights.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+
+            document.getElementById('complexityWeightForm').innerHTML = weights.map(w => `
+                <div class="weight-item">
+                    <label>${labels[w.name] || w.name}</label>
+                    <input type="number"
+                           id="cweight-${w.name}"
+                           value="${(w.weight * 100).toFixed(0)}"
+                           min="0" max="100" step="5">
+                    <span>%</span>
+                </div>
+            `).join('');
+        }
+
+        // 儲存複雜度公式權重（第一層）
+        async function saveComplexityWeights(silent = false) {
+            const inputs = document.querySelectorAll('#complexityWeightForm input');
+            const weights = {};
+            inputs.forEach(input => {
+                weights[input.id.replace('cweight-', '')] = parseFloat(input.value) / 100;
+            });
+
+            const total = Object.values(weights).reduce((a, b) => a + b, 0);
+            if (Math.abs(total - 1) > 0.01) {
+                alert(`複雜度權重總和應為 100%，目前為 ${(total * 100).toFixed(0)}%`);
+                return false;
+            }
+
+            await fetch('/api/complexity-weights', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ weights })
+            });
+
+            if (!silent) alert('複雜度權重已儲存！按「🔄 套用並重新計算」後即會反映到既有資料的分數。');
+            return true;
+        }
+
         // 儲存權重
         async function saveWeights() {
             const inputs = document.querySelectorAll('#weightForm input');
@@ -1599,6 +1658,7 @@
             }
             
             await saveWeights();
+            await saveComplexityWeights(true);
             await fetch(`/api/recalculate/${currentBatch}`, { method: 'POST' });
             await loadResults();
             alert('已重新計算！');
