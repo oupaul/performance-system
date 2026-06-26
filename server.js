@@ -980,6 +980,34 @@ app.delete('/api/keywords/:id', (req, res) => {
     }
 });
 
+// 批次刪除關鍵字
+app.post('/api/keywords/batch-delete', (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: '請提供要刪除的關鍵字 ID 陣列' });
+        }
+
+        // 僅保留有效的正整數 ID
+        const validIds = ids.map(Number).filter(n => Number.isInteger(n) && n > 0);
+        if (validIds.length === 0) {
+            return res.status(400).json({ error: '沒有有效的關鍵字 ID' });
+        }
+
+        const del = db.prepare('DELETE FROM keywords WHERE id = ?');
+        const deleteMany = db.transaction((idList) => {
+            let count = 0;
+            for (const id of idList) count += del.run(id).changes;
+            return count;
+        });
+        const deleted = deleteMany(validIds);
+
+        res.json({ success: true, deleted });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 下載關鍵字匯入範本
 app.get('/api/keywords/template', async (req, res) => {
     try {

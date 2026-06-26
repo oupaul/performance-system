@@ -272,7 +272,52 @@
         .keyword-tag .delete:hover {
             opacity: 1;
         }
-        
+
+        .keyword-tag .kw-check {
+            cursor: pointer;
+            margin: 0;
+            width: 15px;
+            height: 15px;
+        }
+
+        .keyword-tag.selected {
+            outline: 2px solid #667eea;
+            outline-offset: 1px;
+        }
+
+        .keyword-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin: 10px 0 18px;
+            padding: 10px 14px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .keyword-toolbar label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-danger {
+            background: #e53e3e;
+            color: #fff;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c53030;
+        }
+
+        .btn-danger:disabled {
+            background: #f0a0a0;
+            cursor: not-allowed;
+        }
+
         .detail-toggle {
             background: none;
             border: none;
@@ -771,7 +816,16 @@
                 </div>
             </div>
             <input type="file" id="importKeywordFile" accept=".xlsx,.xls" style="display: none;" onchange="importKeywords(event)">
-            
+
+            <!-- 批次操作工具列 -->
+            <div class="keyword-toolbar">
+                <label>
+                    <input type="checkbox" id="kwSelectAll" onchange="toggleSelectAllKeywords(this.checked)"> 全選
+                </label>
+                <button class="btn btn-danger" id="kwBatchDeleteBtn" onclick="batchDeleteKeywords()" disabled>🗑️ 刪除選取 (0)</button>
+                <span style="color:#888;font-size:13px;">勾選關鍵字後可一次刪除多筆</span>
+            </div>
+
             <h4 style="margin: 20px 0 10px; color: #c65911;">🔴 高專業度 (25分/個)</h4>
             <div class="keyword-list" id="keywords-high"></div>
             
@@ -1576,11 +1630,67 @@
                 const containerId = `keywords-${level === '高專業度' ? 'high' : level === '中專業度' ? 'mid' : 'low'}`;
                 document.getElementById(containerId).innerHTML = kws.map(k => `
                     <span class="keyword-tag badge-${badgeClass[level]}">
+                        <input type="checkbox" class="kw-check" value="${k.id}" onchange="onKeywordCheckChange(this)">
                         ${k.keyword}
                         <span class="delete" onclick="deleteKeyword(${k.id})">✕</span>
                     </span>
                 `).join('');
             }
+
+            // 重建後重置選取狀態
+            updateKeywordSelectionUI();
+        }
+
+        // 單一勾選框變更
+        function onKeywordCheckChange(cb) {
+            cb.closest('.keyword-tag').classList.toggle('selected', cb.checked);
+            updateKeywordSelectionUI();
+        }
+
+        // 全選 / 取消全選
+        function toggleSelectAllKeywords(checked) {
+            document.querySelectorAll('.kw-check').forEach(c => {
+                c.checked = checked;
+                c.closest('.keyword-tag').classList.toggle('selected', checked);
+            });
+            updateKeywordSelectionUI();
+        }
+
+        // 更新工具列狀態（刪除按鈕數量、全選框）
+        function updateKeywordSelectionUI() {
+            const checks = document.querySelectorAll('.kw-check');
+            const checkedCount = document.querySelectorAll('.kw-check:checked').length;
+
+            const btn = document.getElementById('kwBatchDeleteBtn');
+            if (btn) {
+                btn.textContent = `🗑️ 刪除選取 (${checkedCount})`;
+                btn.disabled = checkedCount === 0;
+            }
+
+            const selectAll = document.getElementById('kwSelectAll');
+            if (selectAll) {
+                selectAll.checked = checks.length > 0 && checkedCount === checks.length;
+                selectAll.indeterminate = checkedCount > 0 && checkedCount < checks.length;
+            }
+        }
+
+        // 批次刪除選取的關鍵字
+        async function batchDeleteKeywords() {
+            const ids = [...document.querySelectorAll('.kw-check:checked')].map(c => parseInt(c.value, 10));
+            if (ids.length === 0) return;
+            if (!confirm(`確定要刪除選取的 ${ids.length} 個關鍵字？此動作無法復原。`)) return;
+
+            const res = await fetch('/api/keywords/batch-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert('刪除失敗：' + (data.error || '未知錯誤'));
+                return;
+            }
+            await loadKeywords();
         }
         
         // 新增關鍵字
