@@ -166,6 +166,23 @@ chmod +x *.sh
 
 > ⚠️ 備份檔含個資與資料庫，請妥善保管，勿外傳或上傳公開空間。
 
+### 設備類型資料救援
+
+若「設備類型管理」的資料異常消失，可用此工具從各 db 副本與備份中找回：
+
+```bash
+# 1) 先掃描，看哪一份最完整（唯讀，不會修改任何資料）
+node recover-device-types.js
+
+# 2) 還原最完整的一份到目前使用中的資料庫
+node recover-device-types.js --apply
+
+# 或指定還原目標（例如正式環境的 db）
+node recover-device-types.js --apply --target /opt/perfom-dev/db/performance.db
+```
+
+還原採 `INSERT ... ON CONFLICT` 更新分數，不會刪除既有資料；完成後重啟服務並 `Ctrl+F5`。
+
 ## License
 
 MIT
