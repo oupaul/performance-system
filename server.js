@@ -1345,6 +1345,168 @@ app.delete('/api/device-types/:id', (req, res) => {
     }
 });
 
+// 批次刪除設備類型
+app.post('/api/device-types/batch-delete', (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: '請提供要刪除的設備類型 ID 陣列' });
+        }
+        const validIds = ids.map(Number).filter(n => Number.isInteger(n) && n > 0);
+        if (validIds.length === 0) {
+            return res.status(400).json({ error: '沒有有效的設備類型 ID' });
+        }
+        const del = db.prepare('DELETE FROM device_types WHERE id = ?');
+        const deleteMany = db.transaction((idList) => {
+            let count = 0;
+            for (const id of idList) count += del.run(id).changes;
+            return count;
+        });
+        const deleted = deleteMany(validIds);
+        res.json({ success: true, deleted });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 匯出設備類型
+app.get('/api/device-types/export', async (req, res) => {
+    try {
+        const rows = db.prepare('SELECT device_name, score FROM device_types ORDER BY score DESC, device_name').all();
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('設備類型');
+        worksheet.columns = [
+            { header: '設備名稱', key: 'device_name', width: 30 },
+            { header: '分數', key: 'score', width: 10 }
+        ];
+        rows.forEach(r => worksheet.addRow(r));
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBDD7EE' } };
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=device_types_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 下載設備類型匯入範本
+app.get('/api/device-types/template', async (req, res) => {
+    try {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('設備類型');
+        worksheet.columns = [
+            { header: '設備名稱', key: 'device_name', width: 30 },
+            { header: '分數', key: 'score', width: 10 }
+        ];
+        [['伺服器', 20], ['網路設備', 18], ['個人電腦', 8], ['列印設備', 4]]
+            .forEach(([name, score]) => worksheet.addRow({ device_name: name, score }));
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBDD7EE' } };
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=device_types_template.xlsx');
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 批次匯入設備類型
+app.post('/api/device-types/import', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: '請選擇檔案' });
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.readFile(req.file.path);
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({ error: '檔案中沒有工作表' });
+        }
+
+        // 讀取標題列找欄位
+        const headerRow = worksheet.getRow(1);
+        const headers = {};
+        let colIndex = 1;
+        headerRow.eachCell({ includeEmpty: false }, (cell) => {
+            const name = cell.value ? String(cell.value).trim() : '';
+            if (name) headers[colIndex] = name;
+            colIndex++;
+        });
+
+        if (!Object.values(headers).includes('設備名稱')) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({ error: '缺少必要欄位：設備名稱' });
+        }
+
+        let nameCol = null, scoreCol = null;
+        Object.entries(headers).forEach(([col, name]) => {
+            if (name === '設備名稱') nameCol = parseInt(col);
+            if (name === '分數') scoreCol = parseInt(col);
+        });
+
+        const errors = [];
+        let inserted = 0, updated = 0;
+        const insertStmt = db.prepare('INSERT INTO device_types (device_name, score) VALUES (?, ?)');
+        const updateStmt = db.prepare('UPDATE device_types SET score = ? WHERE id = ?');
+        const findStmt = db.prepare('SELECT id FROM device_types WHERE device_name = ?');
+
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            if (rowNumber === 1) return;
+            try {
+                const nameCell = row.getCell(nameCol);
+                const scoreCell = scoreCol ? row.getCell(scoreCol) : null;
+
+                const name = nameCell.value ? String(nameCell.value).trim() : '';
+                if (!name) {
+                    errors.push(`第 ${rowNumber} 行：設備名稱不能為空`);
+                    return;
+                }
+
+                let score = 5;
+                if (scoreCell && scoreCell.value !== null && scoreCell.value !== undefined) {
+                    score = typeof scoreCell.value === 'number' ? scoreCell.value : parseFloat(String(scoreCell.value));
+                    if (isNaN(score)) {
+                        errors.push(`第 ${rowNumber} 行：分數必須是數字`);
+                        return;
+                    }
+                }
+
+                const existing = findStmt.get(name);
+                if (existing) {
+                    updateStmt.run(score, existing.id);
+                    updated++;
+                } else {
+                    insertStmt.run(name, score);
+                    inserted++;
+                }
+            } catch (error) {
+                errors.push(`第 ${rowNumber} 行：${error.message}`);
+            }
+        });
+
+        fs.unlinkSync(req.file.path);
+        res.json({
+            success: true,
+            imported: inserted,
+            updated,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 匯出 Excel 報表
 app.get('/api/export/:batch', async (req, res) => {
     try {

@@ -862,11 +862,30 @@
             <div class="section-title">設備類型管理</div>
             <p style="color: #666; margin-bottom: 20px;">根據工作類別(work_type)欄位中的設備類型關鍵字判斷複雜度分數</p>
             <p style="color: #888; font-size: 12px; margin-bottom: 20px;">判斷方式：檢查工作類別字串是否包含設備類型關鍵字，若包含多個則取最高分</p>
-            
+
+            <!-- 匯出/匯入操作區 -->
+            <div style="margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="exportDeviceTypes()">📥 匯出設備類型</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importDeviceFile').click()">📤 批次匯入</button>
+                <button class="btn btn-secondary" onclick="downloadDeviceTemplate()">📋 下載匯入範本</button>
+                <span style="color:#888;font-size:13px;">匯入欄位：設備名稱（必填）、分數（選填，預設 5）；同名會更新分數</span>
+            </div>
+            <input type="file" id="importDeviceFile" accept=".xlsx,.xls" style="display: none;" onchange="importDeviceTypes(event)">
+
+            <!-- 批次刪除工具列 -->
+            <div class="keyword-toolbar">
+                <label>
+                    <input type="checkbox" id="dtSelectAll" onchange="toggleSelectAllDevices(this.checked)"> 全選
+                </label>
+                <button class="btn btn-danger" id="dtBatchDeleteBtn" onclick="batchDeleteDevices()" disabled>🗑️ 刪除選取 (0)</button>
+                <span style="color:#888;font-size:13px;">勾選後可一次刪除多筆設備類型</span>
+            </div>
+
             <div style="margin-bottom: 30px;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background: #f5f5f5;">
+                            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 44px;"></th>
                             <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">設備類型</th>
                             <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 150px;">分數</th>
                             <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 180px;">操作</th>
@@ -1856,6 +1875,9 @@
             
             document.getElementById('deviceTypesList').innerHTML = deviceTypes.map(dt => `
                 <tr style="border-bottom: 1px solid #eee;" id="device-row-${dt.id}">
+                    <td style="padding: 12px; text-align: center;">
+                        <input type="checkbox" class="dt-check" value="${dt.id}" onchange="onDeviceCheckChange()" style="width:15px;height:15px;cursor:pointer;">
+                    </td>
                     <td style="padding: 12px;">${dt.device_name}</td>
                     <td style="padding: 12px; text-align: center;">
                         <input type="number" 
@@ -1877,8 +1899,98 @@
                     </td>
                 </tr>
             `).join('');
+
+            // 重建後重置選取狀態
+            updateDeviceSelectionUI();
         }
-        
+
+        // 單一勾選變更
+        function onDeviceCheckChange() {
+            updateDeviceSelectionUI();
+        }
+
+        // 全選 / 取消全選
+        function toggleSelectAllDevices(checked) {
+            document.querySelectorAll('.dt-check').forEach(c => { c.checked = checked; });
+            updateDeviceSelectionUI();
+        }
+
+        // 更新批次刪除工具列狀態
+        function updateDeviceSelectionUI() {
+            const checks = document.querySelectorAll('.dt-check');
+            const checkedCount = document.querySelectorAll('.dt-check:checked').length;
+
+            const btn = document.getElementById('dtBatchDeleteBtn');
+            if (btn) {
+                btn.textContent = `🗑️ 刪除選取 (${checkedCount})`;
+                btn.disabled = checkedCount === 0;
+            }
+            const selectAll = document.getElementById('dtSelectAll');
+            if (selectAll) {
+                selectAll.checked = checks.length > 0 && checkedCount === checks.length;
+                selectAll.indeterminate = checkedCount > 0 && checkedCount < checks.length;
+            }
+        }
+
+        // 批次刪除設備類型
+        async function batchDeleteDevices() {
+            const ids = [...document.querySelectorAll('.dt-check:checked')].map(c => parseInt(c.value, 10));
+            if (ids.length === 0) return;
+            if (!confirm(`確定要刪除選取的 ${ids.length} 個設備類型？此動作無法復原。`)) return;
+
+            const res = await fetch('/api/device-types/batch-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert('刪除失敗：' + (data.error || '未知錯誤'));
+                return;
+            }
+            await loadDeviceTypes();
+            await updateDeviceTypeReference();
+        }
+
+        // 匯出設備類型
+        function exportDeviceTypes() {
+            window.location.href = '/api/device-types/export';
+        }
+
+        // 下載設備類型匯入範本
+        function downloadDeviceTemplate() {
+            window.location.href = '/api/device-types/template';
+        }
+
+        // 批次匯入設備類型
+        async function importDeviceTypes(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/device-types/import', { method: 'POST', body: formData });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    alert('匯入失敗：' + (data.error || '未知錯誤'));
+                } else {
+                    let msg = `匯入完成！新增 ${data.imported || 0} 筆、更新 ${data.updated || 0} 筆`;
+                    if (data.errors && data.errors.length) {
+                        msg += `\n\n部分資料有問題：\n` + data.errors.slice(0, 10).join('\n');
+                    }
+                    alert(msg);
+                    await loadDeviceTypes();
+                    await updateDeviceTypeReference();
+                }
+            } catch (error) {
+                alert('匯入時發生錯誤：' + error.message);
+            } finally {
+                event.target.value = '';
+            }
+        }
+
         // 啟用儲存按鈕（當分數改變時）
         function enableSaveButton(id) {
             const saveBtn = document.getElementById(`save-btn-${id}`);
